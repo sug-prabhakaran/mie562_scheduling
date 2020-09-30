@@ -151,3 +151,136 @@ def machine_activate(task_data, res_queue, ip_tasks):
     print("In Progress Tasks:", ip_tasks)
 
     return res_queue, ip_tasks
+
+def find_next_time(time, ip_tasks):
+    """
+    Calculates next time based on shortest task currently in-progress
+
+    Args:
+        (int) time       - current time
+        (dict) task_data - contains master task data
+        (dict) ip_tasks  - contains current tasks in progress
+
+    Returns:
+        (int) next_time  - next time that entire loop needs to run
+    """
+
+    time_list = []
+
+    # loop through each in progress task:
+    for key in ip_tasks:
+
+        #add the 'end-times' for each in-progress task to the time_list
+        time_list.append(int(ip_tasks[key][2]))
+
+    # find the minimum pj task for resoure r:
+    if len(time_list) != 0:
+        next_time = int(min(time_list))
+
+        print("\nNext time: ", next_time)
+        return next_time
+
+    # if ip list is empty, time_list will be empty and therefore, time remains
+    else:
+        return time
+
+def update_ip_to_completed(time_new, ip_tasks, compl_tasks):
+    """
+    Update completed tasks and in-progress tasks based on new time
+
+    Args:
+        (int) time_new     - update time
+        (dict) ip_tasks    - contains current tasks in progress
+        (dict) compl_tasks - contains completed tasks
+
+    Returns:
+        (dict) ip_tasks    - updated current tasks in progress
+        (dict) compl_tasks - updated completed tasks
+    """
+
+    #loop through each task in ip_tasks and compare with new time
+    for key in ip_tasks.copy():
+
+        # if task start time + task duration (pj) is less than current time
+        if (int(ip_tasks[key][1]) + int(ip_tasks[key][2])) <= time_new:
+
+            # task is complete. Add to compl_tasks
+            compl_tasks[ip_tasks[key][0]] = time_new
+
+            # remove from in-progress
+            del ip_tasks[key]
+
+    print("\nIn Progress Tasks:", ip_tasks)
+    print("Completed Tasks:", compl_tasks)
+
+    return ip_tasks, compl_tasks
+
+def update_res_queue(unavail_tasks,res_queue, compl_tasks):
+    """
+    Update unavailable tasks and resource queue based on what is complete
+
+    Args:
+        (dict) unavail_tasks - contains tasks unable to start (due to predecessor)
+        (dict) res_queue     - contains queue of avail tasks by resource
+        (dict) compl_tasks   - contains completed tasks
+
+    Returns:
+        (dict) unavail_tasks - updated unavail tasks
+        (dict) res_queue     - updated res_queue
+    """
+
+    for key in unavail_tasks.copy():
+
+        j = unavail_tasks[key][0]
+        t = unavail_tasks[key][1]
+
+        if "j{}t{}".format(j,t-1) in compl_tasks:
+
+            if "r{}".format(unavail_tasks[key][2]) not in res_queue:
+                res_queue["r{}".format(task_data[key][2])] = []
+
+            # add task to res_queue, organized by machine 'r'
+            res_queue["r{}".format(unavail_tasks[key][2])].append(key)
+
+            #remove task from unvail and move to avail
+            del unavail_tasks[key]
+
+    print("\nUnavailable Tasks:", unavail_tasks)
+    print("Resource Queue:", res_queue)
+
+    return unavail_tasks, res_queue
+
+###MAIN EXECUTE SECTION
+instance = "answer0.txt"
+
+jobs, machines, tasks, task_data = load_data(instance)
+
+time = 0
+print("\nStart Time:", time)
+
+unavail_tasks, res_queue, ip_tasks, compl_tasks = initialize_dicts(task_data)
+
+res_queue, ip_tasks = machine_activate(task_data, res_queue, ip_tasks)
+
+for i in range(20):
+
+    time_new = find_next_time(time, ip_tasks)
+    time = time_new
+    print("Cycle Time:", time)
+
+    ip_tasks, compl_tasks = update_ip_to_completed(time_new, ip_tasks, compl_tasks)
+
+    unavail_tasks, res_queue = update_res_queue(unavail_tasks, res_queue, compl_tasks)
+
+    res_queue, ip_tasks = machine_activate(task_data, res_queue, ip_tasks)
+
+
+    if len(compl_tasks) == tasks:
+
+        break
+
+print("FINAL RESULT")
+print("\nUnavailable Tasks:", unavail_tasks)
+print("Resource Queue:", res_queue)
+print("In Progress Tasks:", ip_tasks)
+print("Completed Tasks:", compl_tasks)
