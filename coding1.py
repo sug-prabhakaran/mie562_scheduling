@@ -57,7 +57,7 @@ def initialize_dicts(task_data):
 
     Returns:
         (dict) unavail_tasks  - tasks not able to start at time = 0
-        (dict) resource_queue - tasks able to start at time = 0 for each rj
+        (dict) res_queue      - tasks able to start at time = 0 for each rj
         (dict) ip_tasks       - tasks currently in-progress for each resource
         (dict) compl_tasks    - tasks completed
     """
@@ -84,17 +84,70 @@ def initialize_dicts(task_data):
             #if not a task 0, add to unavail_tasks
             unavail_tasks[key] = task_data[key]
 
-    print("\nUnavailable List:", unavail_tasks)
+    print("\nUnavailable Tasks:", unavail_tasks)
     print("Resource Queue:", res_queue)
     print("In-progress Tasks:", ip_tasks)
     print("Compl. List:", compl_tasks)
 
     return unavail_tasks, res_queue, ip_tasks, compl_tasks
 
-instance = "answer0.txt"
+def machine_activate(task_data, res_queue, ip_tasks):
+    """
+    identifies Shortest Processing Time (SPT) task in resource queue for each
+    resource and activates it into In-Progress
 
-jobs, machines, tasks, task_data = load_data(instance)
+    Args:
+        (dict) task_data - contains master task data
+        (dict) res_queue - contains task queue for each resource
+        (dict) ip_tasks  - contains current tasks in progress
 
-time = 0
+    Returns:
+        (dict) res_queue - updated resource queue
+        (dict) ip_tasks  - updated with activated tasks
+    """
 
-unavail_tasks, res_queue, ip_tasks, compl_tasks = initialize_dicts(task_data)
+    # loop through each resource (r0, r1, ...) in resource queue
+    for key in res_queue.copy():
+
+        min_dict = {}   #initialize.  Will be used to calculate min pj task
+
+        # loop through each task in the task list for resource r:
+        for i in range(len(res_queue[key])):
+
+            #add the pj for each task to the min_dict
+            min_dict[res_queue[key][i]] = task_data[res_queue[key][i]][3]
+
+        # find the minimum pj task for resoure r:
+        if len(min_dict) != 0:
+            temp = min(min_dict.values())
+            min_key = [key2 for key2 in min_dict if min_dict[key2] == temp]
+
+            #if only 1 min, we move task to corresponding resource in ip_tasks
+            if len(min_key) == 1:
+                # store task in dict as: {'rj':['jntn', start time, end time]}
+                ip_tasks[key] = [min_key[0], time, time + int(task_data[min_key[0]][3])]
+                del res_queue[key][i]           # remove task from resource queue
+
+            ### TIE-BREAKER ###
+            #if we have more than 1 task with same minimum pj:
+            if len(min_key) > 1:
+                # dict for storing {job key: job #, ..}
+                min_job = {}
+
+                #cycle through each 'jntn' item in min_key list
+                for k in min_key:
+                    #store {job key: job #} for each minimum task
+                    min_job[k] = [task_data[k][0]]
+
+                #find minimum job #
+                temp2 = min(min_job.values())
+                min_job_key = [key3 for key3 in min_job if min_job[key3] == temp2]
+
+                # add task to in-progress: {'rj': ['job key', start time, end time]}
+                ip_tasks[key] = [min_job_key[0], time, time + int(task_data[min_job_key[0]][3])]
+                res_queue[key].remove(min_job_key[0])   # remove task from resource queue
+
+    print("\nResource Queue:", res_queue)
+    print("In Progress Tasks:", ip_tasks)
+
+    return res_queue, ip_tasks
