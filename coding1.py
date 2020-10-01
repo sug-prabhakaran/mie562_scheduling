@@ -74,7 +74,7 @@ def initialize_dicts(task_data):
 
     return unavail_tasks, res_queue
 
-def machine_activate(task_data, res_queue, ip_tasks):
+def machine_activate(time, task_data, res_queue, ip_tasks):
     """
     identifies Shortest Processing Time (SPT) task in resource queue for each
     resource and activates it into In-Progress
@@ -175,7 +175,7 @@ def find_next_time(time, ip_tasks):
     else:
         return time
 
-def update_ip_to_completed(time_new, ip_tasks, task_data, schedule):
+def update_ip_to_completed(time, time_new, ip_tasks, compl_tasks, task_data, schedule):
     """
     Update completed tasks and in-progress tasks based on new time
 
@@ -211,7 +211,7 @@ def update_ip_to_completed(time_new, ip_tasks, task_data, schedule):
 
     return ip_tasks, compl_tasks, schedule
 
-def update_res_queue(unavail_tasks,res_queue, compl_tasks):
+def update_res_queue(task_data, unavail_tasks, res_queue, compl_tasks):
     """
     Update unavailable tasks and resource queue based on what is complete
 
@@ -243,46 +243,61 @@ def update_res_queue(unavail_tasks,res_queue, compl_tasks):
 
     return unavail_tasks, res_queue
 
-###MAIN EXECUTE SECTION
+def run_SPT(instance):
+    """
+    Update unavailable tasks and resource queue based on what is complete
+
+    Args:
+        (str) instance - store file name as 'file_name.txt'
+
+    Returns:
+        (tuple) result - in format: (makespan, {job0:[s01, s02,..],... })
+        where s01, s02,... are respective start times for each job- operation
+    """
+
+    #read 'instance' file and extract master data
+    jobs, machines, tasks, task_data = load_data(instance)
+
+    #Step 0. Initialize key variables for duaration of algority
+    time = 0
+    ip_tasks = {}       #store task in each resource that is in-progress
+    compl_tasks = {}    #store tasks that are complete
+    schedule = {}       #store dict of start time by operation {Jj:[ta,tb,tc,..]}
+
+    #Step 1. set initial values for dicts: no-predecessor tasks moved to res_queue
+    unavail_tasks, res_queue = initialize_dicts(task_data)
+
+    #Step 2. Loop through algorithm until all tasks are complete
+    while len(compl_tasks) < tasks:
+
+        #Step 2A. activate Shortest Processing Time (SPT) tasks from res_queue
+        res_queue, ip_tasks = machine_activate(time, task_data, res_queue, ip_tasks)
+
+        #Step 2B. Find task with closest completion time and set as new time
+        time_new = find_next_time(time, ip_tasks)
+        time = time_new
+
+        #Step 2C. update completed tasks from new time
+        ip_tasks, compl_tasks, schedule = update_ip_to_completed(time, time_new, ip_tasks, compl_tasks, task_data, schedule)
+
+        #if number of completed tasks = tasks in instance, we are done:
+        if len(compl_tasks) == tasks:
+            break
+
+        #Step 2D. update res_queue with tasks with predecessors complete
+        unavail_tasks, res_queue = update_res_queue(task_data, unavail_tasks, res_queue, compl_tasks)
+
+    #Step 3A. final output dict of task start times organized as: {job: [t1, t2, ..]}
+    schedule = {key : schedule[key] for key in sorted(schedule)}
+
+    #Step 3B. convert into format required by marking guide.
+    # makespan is current time (ie. time of final task completion)
+    result = (time, schedule)
+
+    print("Result:", result)
+
+    return result
+
 instance = "selftest0.txt"
 
-#read 'instance' file and extract master data
-jobs, machines, tasks, task_data = load_data(instance)
-
-#Step 0. Initialize key variables for duaration of algority
-time = 0
-ip_tasks = {}       #store task in each resource that is in-progress
-compl_tasks = {}    #store tasks that are complete
-schedule = {}       #store dict of start time by operation {Jj:[ta,tb,tc,..]}
-
-#Step 1. set initial values for dicts: no-predecessor tasks moved to res_queue
-unavail_tasks, res_queue = initialize_dicts(task_data)
-
-#Step 2. Loop through algorithm until all tasks are complete
-while len(compl_tasks) < tasks:
-
-    #Step 2A. activate Shortest Processing Time (SPT) tasks from res_queue
-    res_queue, ip_tasks = machine_activate(task_data, res_queue, ip_tasks)
-
-    #Step 2B. Find task with closest completion time and set as new time
-    time_new = find_next_time(time, ip_tasks)
-    time = time_new
-
-    #Step 2C. update completed tasks from new time
-    ip_tasks, compl_tasks, schedule = update_ip_to_completed(time_new, ip_tasks, task_data, schedule)
-
-    #if number of completed tasks = tasks in instance, we are done:
-    if len(compl_tasks) == tasks:
-        break
-
-    #Step 2D. update res_queue with tasks with predecessors complete
-    unavail_tasks, res_queue = update_res_queue(unavail_tasks, res_queue, compl_tasks)
-
-#Step 3A. final output dict of task start times organized as: {job: [t1, t2, ..]}
-schedule = {key : schedule[key] for key in sorted(schedule)}
-
-#Step 3B. convert into format required by marking guide.
-# makespan is current time (ie. time of final task completion)
-result = (time, schedule)
-
-print("Result:", result)
+run_SPT(instance)
