@@ -16,8 +16,6 @@ def load_data(instance):
     with open(instance) as f:
         data = f.read().splitlines()
 
-    print("Raw data:", data)
-
     #convert job rows into lists of form: [r1, p1, r2, p2, ...] for each task
     for i in range(2,len(data)):
         data[i] = data[i].split('  ')
@@ -39,12 +37,6 @@ def load_data(instance):
 
     tasks = len(task_data)  #number of tasks total
 
-    print("# of jobs (j):", jobs)
-    print("# of machines (r):", machines)
-    print("# of tasks (t):", tasks)
-    print("Task data format: {'key', (j, t, rj, pj)}")
-    print("Task data:", task_data)
-
     return jobs, machines, tasks, task_data
 
 def initialize_dicts(task_data):
@@ -59,7 +51,7 @@ def initialize_dicts(task_data):
         (dict) unavail_tasks - tasks not able to start at time = 0
         (dict) res_queue     - tasks able to start at time = 0 for each rj
     """
-    
+
     #initialize empty containers
     unavail_tasks = {} #tasks not avail to start (ie. predecessors not compl)
     res_queue = {}     #tasks avail. by resource (ie. no outstanding predecessors)
@@ -80,9 +72,6 @@ def initialize_dicts(task_data):
             #if not a task 0, add to unavail_tasks
             unavail_tasks[key] = task_data[key]
 
-    print("\nUnavailable Tasks:", unavail_tasks)
-    print("Resource Queue:", res_queue)
-
     return unavail_tasks, res_queue
 
 def machine_activate(task_data, res_queue, ip_tasks):
@@ -99,36 +88,27 @@ def machine_activate(task_data, res_queue, ip_tasks):
         (dict) res_queue - updated resource queue
         (dict) ip_tasks  - updated with activated tasks
     """
-    print("\nResource Queue:", res_queue)
-    print("In Progress Tasks:", ip_tasks)
 
     # loop through each resource (r0, r1, ...) in resource queue
     for key in res_queue.copy():
-
-        print("\n0.key", key)                                        ##########
-
         #first check if resource currently has a task in-progress
         if key in ip_tasks != []:
             #resource not free (task in-progress) so skip to next key = 'rj'
-            print("ip_task full - continue")
             continue
 
         #if resource is free:
         else:
             min_key = []    #will store list of pjs for each task in res_que[key]
-            print("1.min_key (initial):", min_key)
 
             #check if we have a list of tasks
             if len(res_queue[key]) == 0:
                 #no tasks in our list so we skip to next key = 'rj'
-                print("rj is empty - continue")
                 continue
 
             #if list has only 1 item, it is automatically min_key
             elif len(res_queue[key]) == 1:
                 #set min_key to list item value
                 min_key = [res_queue[key][0]]
-                print("2.rj list = 1: min_key", min_key)              ##########
 
             #if list is not 0 or 1, must have value > 1. Must find min.
             else:
@@ -137,13 +117,11 @@ def machine_activate(task_data, res_queue, ip_tasks):
                 for i in range(len(res_queue[key])):
                     #add job/task key + pj to min_dict so we can compare them
                     min_dict[res_queue[key][i]] = task_data[res_queue[key][i]][3]
-                    print("3.rj list > 1: i, min_dict:", i, min_dict)                        ##########
 
                 # find the minimum pj task for resoure r:
                 temp = min(min_dict.values())
                 #find the key(s) corresponding to minimum value in min_dicdt
                 min_key = [key2 for key2 in min_dict if min_dict[key2] == temp]
-                print("4.rj list > 1: key, Temp, min_key:", key, temp, min_key)        ##########
 
                 #Option 1: min_key has >1 items:  #TIE BREAKER REQUIRED#
                 if len(min_key) > 1:
@@ -154,27 +132,15 @@ def machine_activate(task_data, res_queue, ip_tasks):
                     for k in min_key:
                         #store job number in min_job dictionary
                         min_job[k] = task_data[k][0]
-                        print("5.rj List >1: k, min_job:", k, min_job)                ##########
 
                     #determine minimum job # value
                     temp2 = min(min_job.values())
                     #find corresponding key to min job value and set as min_key
                     min_key = [key3 for key3 in min_job if min_job[key3] == temp2]
-                    print("6. rj list >1 (+tie): Min_key:", min_key)  #######
 
-            print("F.key, min_key:", key, min_key)
-
-            print("\nBefore Ip Tasks:", ip_tasks)
             #now that we have the min_key for each key 'rj': adjust lists
             ip_tasks[key] = [min_key[0], time, time + int(task_data[min_key[0]][3])]
-            print("After Ip Tasks:", ip_tasks)
-
-            print("\nBefore res_queue:", res_queue)
             res_queue[key].remove(min_key[0])   # remove task from resource queue
-            print("After res_queue:", res_queue)
-
-    print("\nResource Queue:", res_queue)
-    print("In Progress Tasks:", ip_tasks)
 
     return res_queue, ip_tasks
 
@@ -216,6 +182,8 @@ def update_ip_to_completed(time_new, ip_tasks, task_data, schedule):
     Args:
         (int) time_new     - update time
         (dict) ip_tasks    - contains current tasks in progress
+        (dict) task_data   - contains master data
+        (dict) schedule    - stores task start times for results
 
     Returns:
         (dict) ip_tasks    - updated current tasks in progress
@@ -240,9 +208,6 @@ def update_ip_to_completed(time_new, ip_tasks, task_data, schedule):
 
             # remove from in-progress
             del ip_tasks[key]
-
-    print("Completed Tasks:", compl_tasks)
-    print("In Progress Tasks:", ip_tasks)
 
     return ip_tasks, compl_tasks, schedule
 
@@ -276,13 +241,10 @@ def update_res_queue(unavail_tasks,res_queue, compl_tasks):
             #remove task from unvail and move to avail
             del unavail_tasks[key]
 
-    print("\nUnavailable Tasks:", unavail_tasks)
-    print("Resource Queue:", res_queue)
-
     return unavail_tasks, res_queue
 
 ###MAIN EXECUTE SECTION
-instance = "answer1.txt"
+instance = "selftest0.txt"
 
 #read 'instance' file and extract master data
 jobs, machines, tasks, task_data = load_data(instance)
@@ -293,41 +255,34 @@ ip_tasks = {}       #store task in each resource that is in-progress
 compl_tasks = {}    #store tasks that are complete
 schedule = {}       #store dict of start time by operation {Jj:[ta,tb,tc,..]}
 
-print("\nStart Time:", time)
-
 #Step 1. set initial values for dicts: no-predecessor tasks moved to res_queue
 unavail_tasks, res_queue = initialize_dicts(task_data)
-
-print("\nCurrent Time:", time)
 
 #Step 2. Loop through algorithm until all tasks are complete
 while len(compl_tasks) < tasks:
 
-    #Step 2A. activate Shortest Processing Time (SPT) tasks
+    #Step 2A. activate Shortest Processing Time (SPT) tasks from res_queue
     res_queue, ip_tasks = machine_activate(task_data, res_queue, ip_tasks)
 
-    #Step
+    #Step 2B. Find task with closest completion time and set as new time
     time_new = find_next_time(time, ip_tasks)
     time = time_new
 
-    print("\nCurrent Time:", time)
+    #Step 2C. update completed tasks from new time
     ip_tasks, compl_tasks, schedule = update_ip_to_completed(time_new, ip_tasks, task_data, schedule)
 
+    #if number of completed tasks = tasks in instance, we are done:
     if len(compl_tasks) == tasks:
         break
 
+    #Step 2D. update res_queue with tasks with predecessors complete
     unavail_tasks, res_queue = update_res_queue(unavail_tasks, res_queue, compl_tasks)
 
-
+#Step 3A. final output dict of task start times organized as: {job: [t1, t2, ..]}
 schedule = {key : schedule[key] for key in sorted(schedule)}
 
+#Step 3B. convert into format required by marking guide.
+# makespan is current time (ie. time of final task completion)
 result = (time, schedule)
 
-print("\nFINAL RESULT")
-print("Unavailable Tasks:", unavail_tasks)
-print("Resource Queue:", res_queue)
-print("In Progress Tasks:", ip_tasks)
-print("Completed Tasks:", compl_tasks)
-print("Final Time", time)
-print("Schedule:", schedule)
 print("Result:", result)
