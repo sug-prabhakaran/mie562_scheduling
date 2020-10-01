@@ -6,10 +6,10 @@ def load_data(instance):
         (str) instance - variable storing 'filename.txt'
 
     Returns:
-        (int) jobs       - number of jobs 'j'
-        (int) machines   - number of machines (resources - 'r')
-        (int) tasks      - number of tasks total 'temp'
-        (dict) task_data - hold for each job/task key: (j, t, rj, proc. time pj)
+        (int) jobs       - number of jobs
+        (int) machines   - number of machines (resources)
+        (int) tasks      - number of tasks total
+        (dict) task_data - hold for each job/task key: (job, task, machine, processing time)
     """
 
     #read file with: instance = "filename.txt"
@@ -23,7 +23,7 @@ def load_data(instance):
         data[i] = data[i].split('  ')
 
     #convert row 1 into form: [job, machines]
-    data[1] = data[1].split(' ')
+    data[1] = data[1].split('  ')
 
     jobs = int(data[1][0])      #access 1st item in item 1 list
     machines = int(data[1][1])  #access 2nd item in item 1 list
@@ -53,20 +53,16 @@ def initialize_dicts(task_data):
     for: unavailable tasks, resource queue, in-progress tasks, completed tasks
 
     Args:
-        (str) instance - variable storing 'filename.txt'
+        (dict) task_data      - contains master task data
 
     Returns:
-        (dict) unavail_tasks  - tasks not able to start at time = 0
-        (dict) res_queue      - tasks able to start at time = 0 for each rj
-        (dict) ip_tasks       - tasks currently in-progress for each resource
-        (dict) compl_tasks    - tasks completed
+        (dict) unavail_tasks - tasks not able to start at time = 0
+        (dict) res_queue     - tasks able to start at time = 0 for each rj
     """
-
+    
     #initialize empty containers
     unavail_tasks = {} #tasks not avail to start (ie. predecessors not compl)
     res_queue = {}     #tasks avail. by resource (ie. no outstanding predecessors)
-    ip_tasks = {}      #task in-progress for each resource
-    compl_tasks = {}   #Initialize compl. list to compare if predecessor is done
 
     #loop through each task in task_data
     for key in task_data:
@@ -86,10 +82,8 @@ def initialize_dicts(task_data):
 
     print("\nUnavailable Tasks:", unavail_tasks)
     print("Resource Queue:", res_queue)
-    print("In-progress Tasks:", ip_tasks)
-    print("Compl. List:", compl_tasks)
 
-    return unavail_tasks, res_queue, ip_tasks, compl_tasks
+    return unavail_tasks, res_queue
 
 def machine_activate(task_data, res_queue, ip_tasks):
     """
@@ -105,47 +99,79 @@ def machine_activate(task_data, res_queue, ip_tasks):
         (dict) res_queue - updated resource queue
         (dict) ip_tasks  - updated with activated tasks
     """
+    print("\nResource Queue:", res_queue)
+    print("In Progress Tasks:", ip_tasks)
 
     # loop through each resource (r0, r1, ...) in resource queue
     for key in res_queue.copy():
 
-        min_dict = {}   #initialize.  Will be used to calculate min pj task
+        print("\n0.key", key)                                        ##########
 
-        # loop through each task in the task list for resource r:
-        for i in range(len(res_queue[key])):
+        #first check if resource currently has a task in-progress
+        if key in ip_tasks != []:
+            #resource not free (task in-progress) so skip to next key = 'rj'
+            print("ip_task full - continue")
+            continue
 
-            #add the pj for each task to the min_dict
-            min_dict[res_queue[key][i]] = task_data[res_queue[key][i]][3]
+        #if resource is free:
+        else:
+            min_key = []    #will store list of pjs for each task in res_que[key]
+            print("1.min_key (initial):", min_key)
 
-        # find the minimum pj task for resoure r:
-        if len(min_dict) != 0:
-            temp = min(min_dict.values())
-            min_key = [key2 for key2 in min_dict if min_dict[key2] == temp]
+            #check if we have a list of tasks
+            if len(res_queue[key]) == 0:
+                #no tasks in our list so we skip to next key = 'rj'
+                print("rj is empty - continue")
+                continue
 
-            #if only 1 min, we move task to corresponding resource in ip_tasks
-            if len(min_key) == 1:
-                # store task in dict as: {'rj':['jntn', start time, end time]}
-                ip_tasks[key] = [min_key[0], time, time + int(task_data[min_key[0]][3])]
-                del res_queue[key][i]           # remove task from resource queue
+            #if list has only 1 item, it is automatically min_key
+            elif len(res_queue[key]) == 1:
+                #set min_key to list item value
+                min_key = [res_queue[key][0]]
+                print("2.rj list = 1: min_key", min_key)              ##########
 
-            ### TIE-BREAKER ###
-            #if we have more than 1 task with same minimum pj:
-            if len(min_key) > 1:
-                # dict for storing {job key: job #, ..}
-                min_job = {}
+            #if list is not 0 or 1, must have value > 1. Must find min.
+            else:
+                min_dict = {}   #initialize.  Will be used to determine min pj task
+                # loop through each task in res_queue task list
+                for i in range(len(res_queue[key])):
+                    #add job/task key + pj to min_dict so we can compare them
+                    min_dict[res_queue[key][i]] = task_data[res_queue[key][i]][3]
+                    print("3.rj list > 1: i, min_dict:", i, min_dict)                        ##########
 
-                #cycle through each 'jntn' item in min_key list
-                for k in min_key:
-                    #store {job key: job #} for each minimum task
-                    min_job[k] = [task_data[k][0]]
+                # find the minimum pj task for resoure r:
+                temp = min(min_dict.values())
+                #find the key(s) corresponding to minimum value in min_dicdt
+                min_key = [key2 for key2 in min_dict if min_dict[key2] == temp]
+                print("4.rj list > 1: key, Temp, min_key:", key, temp, min_key)        ##########
 
-                #find minimum job #
-                temp2 = min(min_job.values())
-                min_job_key = [key3 for key3 in min_job if min_job[key3] == temp2]
+                #Option 1: min_key has >1 items:  #TIE BREAKER REQUIRED#
+                if len(min_key) > 1:
 
-                # add task to in-progress: {'rj': ['job key', start time, end time]}
-                ip_tasks[key] = [min_job_key[0], time, time + int(task_data[min_job_key[0]][3])]
-                res_queue[key].remove(min_job_key[0])   # remove task from resource queue
+                    min_job = {}    #need to compare job # to break tie
+
+                    #loop through each value in min_key list
+                    for k in min_key:
+                        #store job number in min_job dictionary
+                        min_job[k] = task_data[k][0]
+                        print("5.rj List >1: k, min_job:", k, min_job)                ##########
+
+                    #determine minimum job # value
+                    temp2 = min(min_job.values())
+                    #find corresponding key to min job value and set as min_key
+                    min_key = [key3 for key3 in min_job if min_job[key3] == temp2]
+                    print("6. rj list >1 (+tie): Min_key:", min_key)  #######
+
+            print("F.key, min_key:", key, min_key)
+
+            print("\nBefore Ip Tasks:", ip_tasks)
+            #now that we have the min_key for each key 'rj': adjust lists
+            ip_tasks[key] = [min_key[0], time, time + int(task_data[min_key[0]][3])]
+            print("After Ip Tasks:", ip_tasks)
+
+            print("\nBefore res_queue:", res_queue)
+            res_queue[key].remove(min_key[0])   # remove task from resource queue
+            print("After res_queue:", res_queue)
 
     print("\nResource Queue:", res_queue)
     print("In Progress Tasks:", ip_tasks)
@@ -177,43 +203,48 @@ def find_next_time(time, ip_tasks):
     if len(time_list) != 0:
         next_time = int(min(time_list))
 
-        print("\nNext time: ", next_time)
         return next_time
 
     # if ip list is empty, time_list will be empty and therefore, time remains
     else:
         return time
 
-def update_ip_to_completed(time_new, ip_tasks, compl_tasks):
+def update_ip_to_completed(time_new, ip_tasks, task_data, schedule):
     """
     Update completed tasks and in-progress tasks based on new time
 
     Args:
         (int) time_new     - update time
         (dict) ip_tasks    - contains current tasks in progress
-        (dict) compl_tasks - contains completed tasks
 
     Returns:
         (dict) ip_tasks    - updated current tasks in progress
         (dict) compl_tasks - updated completed tasks
+        (dict) schedule    - store compl task start values for final result
     """
 
     #loop through each task in ip_tasks and compare with new time
     for key in ip_tasks.copy():
 
-        # if task start time + task duration (pj) is less than current time
-        if (int(ip_tasks[key][1]) + int(ip_tasks[key][2])) <= time_new:
+        # if task end time = current time
+        if int(ip_tasks[key][2]) == time:
 
             # task is complete. Add to compl_tasks
-            compl_tasks[ip_tasks[key][0]] = time_new
+            compl_tasks[ip_tasks[key][0]] = [ip_tasks[key][1], time]
+
+            if task_data[ip_tasks[key][0]][0] not in schedule:
+                schedule[task_data[ip_tasks[key][0]][0]] = [ip_tasks[key][1]]
+
+            else:
+                schedule[task_data[ip_tasks[key][0]][0]].append(ip_tasks[key][1])
 
             # remove from in-progress
             del ip_tasks[key]
 
-    print("\nIn Progress Tasks:", ip_tasks)
     print("Completed Tasks:", compl_tasks)
+    print("In Progress Tasks:", ip_tasks)
 
-    return ip_tasks, compl_tasks
+    return ip_tasks, compl_tasks, schedule
 
 def update_res_queue(unavail_tasks,res_queue, compl_tasks):
     """
@@ -251,36 +282,52 @@ def update_res_queue(unavail_tasks,res_queue, compl_tasks):
     return unavail_tasks, res_queue
 
 ###MAIN EXECUTE SECTION
-instance = "answer0.txt"
+instance = "answer1.txt"
 
+#read 'instance' file and extract master data
 jobs, machines, tasks, task_data = load_data(instance)
 
+#Step 0. Initialize key variables for duaration of algority
 time = 0
+ip_tasks = {}       #store task in each resource that is in-progress
+compl_tasks = {}    #store tasks that are complete
+schedule = {}       #store dict of start time by operation {Jj:[ta,tb,tc,..]}
+
 print("\nStart Time:", time)
 
-unavail_tasks, res_queue, ip_tasks, compl_tasks = initialize_dicts(task_data)
+#Step 1. set initial values for dicts: no-predecessor tasks moved to res_queue
+unavail_tasks, res_queue = initialize_dicts(task_data)
 
-res_queue, ip_tasks = machine_activate(task_data, res_queue, ip_tasks)
+print("\nCurrent Time:", time)
 
-for i in range(20):
+#Step 2. Loop through algorithm until all tasks are complete
+while len(compl_tasks) < tasks:
 
+    #Step 2A. activate Shortest Processing Time (SPT) tasks
+    res_queue, ip_tasks = machine_activate(task_data, res_queue, ip_tasks)
+
+    #Step
     time_new = find_next_time(time, ip_tasks)
     time = time_new
-    print("Cycle Time:", time)
 
-    ip_tasks, compl_tasks = update_ip_to_completed(time_new, ip_tasks, compl_tasks)
+    print("\nCurrent Time:", time)
+    ip_tasks, compl_tasks, schedule = update_ip_to_completed(time_new, ip_tasks, task_data, schedule)
+
+    if len(compl_tasks) == tasks:
+        break
 
     unavail_tasks, res_queue = update_res_queue(unavail_tasks, res_queue, compl_tasks)
 
-    res_queue, ip_tasks = machine_activate(task_data, res_queue, ip_tasks)
 
+schedule = {key : schedule[key] for key in sorted(schedule)}
 
-    if len(compl_tasks) == tasks:
+result = (time, schedule)
 
-        break
-
-print("FINAL RESULT")
-print("\nUnavailable Tasks:", unavail_tasks)
+print("\nFINAL RESULT")
+print("Unavailable Tasks:", unavail_tasks)
 print("Resource Queue:", res_queue)
 print("In Progress Tasks:", ip_tasks)
 print("Completed Tasks:", compl_tasks)
+print("Final Time", time)
+print("Schedule:", schedule)
+print("Result:", result)
