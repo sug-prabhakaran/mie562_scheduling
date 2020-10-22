@@ -18,10 +18,10 @@ def load_data(instance):
 
     #convert job rows into lists of form: [r1, p1, r2, p2, ...] for each task
     for i in range(2,len(data)):
-        data[i] = data[i].split('  ')
+        data[i] = data[i].split()
 
     #convert row 1 into form: [job, machines]
-    data[1] = data[1].split('  ')
+    data[1] = data[1].split()
 
     jobs = int(data[1][0])      #access 1st item in item 1 list
     machines = int(data[1][1])  #access 2nd item in item 1 list
@@ -298,6 +298,6 @@ def run_SPT(instance):
 
     return result
 
-instance = "selftest0.txt"
+instance = "mark6.txt"
 
 run_SPT(instance)
