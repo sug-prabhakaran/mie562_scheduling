@@ -1,8 +1,14 @@
 # **Coding Assignment 2 - Solve Job Shop Problem (JSP) with Mixed Integer Programming (MIP)**
 
+## **References**
+
 ## **Formulation**
 
 ### **1. Parameters**
+
+<div class="latex">  
+    \int_{0}^{\pi}\frac{x^{4}\left(1-x\right)^{4}}{1+x^{2}}dx =\frac{22}{7}-\pi  
+</div>
 
 * $j \in J$: operation $j$ in set of all operations $J$
 * $k \in K$: machine/resource $k$ in set of all resources $K$
