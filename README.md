@@ -22,7 +22,7 @@ In this project, I implemented the Shortest Processing Time (SPT) first dispatch
 
 **See folder**: *assignment2_mip_model*
 
-## **Project - Truck-scheduling at Sea-container port*
+## **Project - Truck-scheduling at Sea-container port**
 
 This group project applied two modeling methods (MIP) and Constraint Programming to find optimal scheduling solutions to various instances (scenarios) of sea-containers arriving from an container ship.  The problem is a simplification of a real life problem for containers belonging to Canadian Tire.
 
